@@ -13,4 +13,5 @@ starlette
 uvicorn[standard]
 
 # Other dependencies.
-safir>=3.4.0
+safir>=5.0.0
+pydantic_settings
