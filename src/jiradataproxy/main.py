@@ -7,6 +7,8 @@ constructed when this module is loaded and is not deferred until a function is
 called.
 """
 
+from collections.abc import AsyncIterator
+from contextlib import asynccontextmanager
 from importlib.metadata import metadata, version
 
 from fastapi import FastAPI
@@ -28,6 +30,17 @@ configure_logging(
 )
 configure_uvicorn_logging(config.log_level)
 
+
+@asynccontextmanager
+async def lifespan(app: FastAPI) -> AsyncIterator[None]:
+    # Start up event
+
+    yield
+
+    # Shut down event
+    await http_client_dependency.aclose()
+
+
 app = FastAPI(
     title="jira-data-proxy",
     description=metadata("jira-data-proxy")["Summary"],
@@ -44,8 +57,3 @@ app.include_router(external_router, prefix=f"{config.path_prefix}")
 
 # Add middleware.
 app.add_middleware(XForwardedMiddleware)
-
-
-@app.on_event("shutdown")
-async def shutdown_event() -> None:
-    await http_client_dependency.aclose()
