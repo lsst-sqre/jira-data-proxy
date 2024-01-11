@@ -1,50 +1,61 @@
-"""Handlers for the app's external root, ``/jira-data-proxy/``."""
+"""Handlers for the app's external API, ``/jira-data-proxy/``."""
 
-from fastapi import APIRouter, Depends
+from urllib.parse import urlencode
+
+from fastapi import APIRouter, Depends, Request, Response
+from httpx import AsyncClient
+from safir.dependencies.http_client import http_client_dependency
 from safir.dependencies.logger import logger_dependency
-from safir.metadata import get_metadata
 from structlog.stdlib import BoundLogger
 
 from ..config import config
-from ..models import Index
 
-__all__ = ["get_index", "external_router"]
+__all__ = ["get_jira", "external_router"]
 
 external_router = APIRouter()
 """FastAPI router for all external handlers."""
 
 
 @external_router.get(
-    "/",
-    description=(
-        "Document the top-level API here. By default it only returns metadata"
-        " about the application."
-    ),
-    response_model=Index,
-    response_model_exclude_none=True,
-    summary="Application metadata",
+    "/{path:path}",
+    description="Proxy GET requests to Jira.",
+    name="proxy",
+    response_model=None,
 )
-async def get_index(
+async def get_jira(
+    path: str,
+    request: Request,
     logger: BoundLogger = Depends(logger_dependency),
-) -> Index:
-    """GET ``/jira-data-proxy/`` (the app's external root).
+    http_client: AsyncClient = Depends(http_client_dependency),
+) -> Response:
+    """Proxy GET requests to Jira."""
+    # Format the Jira URL. Potentially this can be done entirely through the
+    # urllib.parse module, but I'm not sure how to concatenate a path
+    # with it.
+    base_url = config.jira_base_url
+    if not base_url.endswith("/"):
+        base_url += "/"
+    url = f"{config.jira_base_url}{path}"
+    if request.query_params:
+        qs = urlencode(dict(request.query_params.items()))
+        url = f"{url}?{qs}"
 
-    Customize this handler to return whatever the top-level resource of your
-    application should return. For example, consider listing key API URLs.
-    When doing so, also change or customize the response model in
-    `jiradataproxy.models.Index`.
-
-    By convention, the root of the external API includes a field called
-    ``metadata`` that provides the same Safir-generated metadata as the
-    internal root endpoint.
-    """
-    # There is no need to log simple requests since uvicorn will do this
-    # automatically, but this is included as an example of how to use the
-    # logger for more complex logging.
-    logger.info("Request for application metadata")
-
-    metadata = get_metadata(
-        package_name="jira-data-proxy",
-        application_name=config.name,
+    logger.debug(
+        "Got Jira request",
+        path=path,
+        jira_url=url,
     )
-    return Index(metadata=metadata)
+
+    new_headers = {
+        "Accept": "application/json",
+    }
+    r = await http_client.get(
+        url,
+        auth=(config.jira_username, config.jira_password.get_secret_value()),
+        headers=new_headers,
+    )
+
+    response_headers = {
+        "Content-Type": r.headers["Content-Type"],
+    }
+    return Response(r.text, headers=response_headers, status_code=200)
