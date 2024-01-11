@@ -21,7 +21,7 @@ jobs:
           - "3.11"
 
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
 
       # Use the oldest supported version of Python to update dependencies,
       # not the matrixed Python version, since this accurately reflects
@@ -29,7 +29,7 @@ jobs:
       - name: Run neophile
         uses: lsst-sqre/run-neophile@v1
         with:
-          python-version: "3.11"
+          python-version: "3.12"
           mode: update
 
       - name: Run tests in tox
