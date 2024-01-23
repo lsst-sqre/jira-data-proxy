@@ -55,8 +55,9 @@ async def get_jira(
         headers=new_headers,
     )
 
+    pass_headers = ["content-type"]
     response_headers = {
-        "Content-Type": r.headers["Content-Type"],
+        k: v for k, v in r.headers.items() if k.lower() in pass_headers
     }
     return Response(
         r.text, headers=response_headers, status_code=r.status_code
