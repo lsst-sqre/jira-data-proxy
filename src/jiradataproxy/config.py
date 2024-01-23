@@ -2,11 +2,25 @@
 
 from __future__ import annotations
 
-from pydantic import Field, SecretStr
+from typing import Annotated
+
+from pydantic import Field, HttpUrl, SecretStr
+from pydantic.functional_validators import AfterValidator
 from pydantic_settings import BaseSettings
 from safir.logging import LogLevel, Profile
 
 __all__ = ["Configuration", "config"]
+
+
+def validate_root_url(url: HttpUrl) -> HttpUrl:
+    """Validate that the URL ends with a trailing slash."""
+    if not url.path:
+        raise ValueError(
+            "URL must have a path that ends with a trailing slash"
+        )
+    if not url.path.endswith("/"):
+        raise ValueError("URL must end with a trailing slash")
+    return url
 
 
 class Configuration(BaseSettings):
@@ -48,8 +62,10 @@ class Configuration(BaseSettings):
         validation_alias="JIRA_PASSWORD",
     )
 
-    jira_base_url: str = Field(
-        "https://jira.lsstcorp.org/",
+    jira_base_url: Annotated[
+        HttpUrl, AfterValidator(validate_root_url)
+    ] = Field(
+        HttpUrl("https://jira.lsstcorp.org/"),
         title="Base URL for the Jira API",
         validation_alias="JIRA_BASE_URL",
     )

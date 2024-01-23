@@ -1,6 +1,6 @@
 """Handlers for the app's external API, ``/jira-data-proxy/``."""
 
-from urllib.parse import urlencode
+from urllib.parse import urlencode, urljoin
 
 from fastapi import APIRouter, Depends, Request, Response
 from httpx import AsyncClient
@@ -29,13 +29,13 @@ async def get_jira(
     http_client: AsyncClient = Depends(http_client_dependency),
 ) -> Response:
     """Proxy GET requests to Jira."""
-    # Format the Jira URL. Potentially this can be done entirely through the
-    # urllib.parse module, but I'm not sure how to concatenate a path
-    # with it.
-    base_url = config.jira_base_url
+    # Format the Jira URL. The Configuration model validates that jira_base_url
+    # ends with a trailing slash. And path does not start with a slash, so the
+    # paths can be concatenated.
+    base_url = str(config.jira_base_url)
     if not base_url.endswith("/"):
         base_url += "/"
-    url = f"{config.jira_base_url}{path}"
+    url = urljoin(base_url, path, allow_fragments=False)
     if request.query_params:
         qs = urlencode(dict(request.query_params.items()))
         url = f"{url}?{qs}"
