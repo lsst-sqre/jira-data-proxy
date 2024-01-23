@@ -58,4 +58,6 @@ async def get_jira(
     response_headers = {
         "Content-Type": r.headers["Content-Type"],
     }
-    return Response(r.text, headers=response_headers, status_code=200)
+    return Response(
+        r.text, headers=response_headers, status_code=r.status_code
+    )
