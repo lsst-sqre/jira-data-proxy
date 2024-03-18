@@ -62,12 +62,12 @@ class Configuration(BaseSettings):
         validation_alias="JIRA_PASSWORD",
     )
 
-    jira_base_url: Annotated[
-        HttpUrl, AfterValidator(validate_root_url)
-    ] = Field(
-        HttpUrl("https://jira.lsstcorp.org/"),
-        title="Base URL for the Jira API",
-        validation_alias="JIRA_BASE_URL",
+    jira_base_url: Annotated[HttpUrl, AfterValidator(validate_root_url)] = (
+        Field(
+            HttpUrl("https://jira.lsstcorp.org/"),
+            title="Base URL for the Jira API",
+            validation_alias="JIRA_BASE_URL",
+        )
     )
 
 
