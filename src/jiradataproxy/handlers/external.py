@@ -10,7 +10,7 @@ from structlog.stdlib import BoundLogger
 
 from ..config import config
 
-__all__ = ["get_jira", "external_router"]
+__all__ = ["external_router", "get_jira"]
 
 external_router = APIRouter()
 """FastAPI router for all external handlers."""
