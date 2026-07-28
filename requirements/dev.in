@@ -19,6 +19,7 @@ pydantic
 pytest
 pytest-asyncio
 pytest-cov
+respx
 ruff
 
 # Documentation
