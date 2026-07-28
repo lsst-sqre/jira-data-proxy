@@ -48,6 +48,7 @@ app = FastAPI(
     openapi_url=f"/{config.path_prefix}/openapi.json",
     docs_url=f"/{config.path_prefix}/docs",
     redoc_url=f"/{config.path_prefix}/redoc",
+    lifespan=lifespan,
 )
 """The main FastAPI application for jira-data-proxy."""
 
