@@ -169,6 +169,65 @@ async def test_proxy_passes_error_status_and_body(
 
 
 @pytest.mark.asyncio
+async def test_proxy_follows_redirects(
+    client: AsyncClient, respx_mock: respx.Router, jira_base_url: str
+) -> None:
+    """Redirects from Jira are followed and the final response returned.
+
+    Some Jira endpoints redirect, so the shared HTTP client that safir
+    provides is built with ``follow_redirects=True``. This pins that
+    behavior: the proxy must return the redirect target's response rather
+    than handing the 302 back to the caller. The credentials are expected to
+    survive a same-origin hop, since that is how an authenticated Jira
+    redirect is meant to work.
+    """
+    redirect = respx_mock.get(
+        f"{jira_base_url}rest/api/2/issue/DM-42460"
+    ).respond(
+        302,
+        headers={"Location": f"{jira_base_url}rest/api/2/issue/DM-42461"},
+    )
+    target = respx_mock.get(
+        f"{jira_base_url}rest/api/2/issue/DM-42461"
+    ).respond(json={"key": "DM-42461"})
+
+    response = await client.get(proxy_url("rest/api/2/issue/DM-42460"))
+
+    assert response.status_code == 200
+    assert response.json() == {"key": "DM-42461"}
+    assert redirect.call_count == 1
+    assert target.call_count == 1
+    assert "Authorization" in target.calls.last.request.headers
+
+
+@pytest.mark.asyncio
+async def test_proxy_drops_credentials_on_cross_origin_redirect(
+    client: AsyncClient, respx_mock: respx.Router, jira_base_url: str
+) -> None:
+    """Jira credentials do not follow a redirect to a different host.
+
+    Following redirects (see ``test_proxy_follows_redirects``) is safe only
+    because httpx strips the ``Authorization`` header when a redirect crosses
+    origins. This pins that guarantee: were it to regress, a redirect away
+    from Jira would hand the bot account's credentials to another host.
+    """
+    redirect = respx_mock.get(f"{jira_base_url}secure/Dashboard.jspa").respond(
+        302, headers={"Location": "https://elsewhere.example.org/landing"}
+    )
+    elsewhere = respx_mock.get(
+        "https://elsewhere.example.org/landing"
+    ).respond(json={"ok": True})
+
+    response = await client.get(proxy_url("secure/Dashboard.jspa"))
+
+    assert response.status_code == 200
+    assert redirect.call_count == 1
+    assert elsewhere.call_count == 1
+    assert "Authorization" in redirect.calls.last.request.headers
+    assert "Authorization" not in elsewhere.calls.last.request.headers
+
+
+@pytest.mark.asyncio
 async def test_proxy_passes_non_json_body(
     client: AsyncClient, respx_mock: respx.Router, jira_base_url: str
 ) -> None:
