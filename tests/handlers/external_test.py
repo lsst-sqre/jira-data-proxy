@@ -228,6 +228,145 @@ async def test_proxy_drops_credentials_on_cross_origin_redirect(
 
 
 @pytest.mark.asyncio
+async def test_proxy_refuses_absolute_url_path(
+    client: AsyncClient, respx_mock: respx.Router, jira_base_url: str
+) -> None:
+    """An absolute URL in the proxied path does not redirect the request.
+
+    ``urljoin`` returns its second argument unchanged when that argument is
+    an absolute URL, so without a check of its own the proxy would send the
+    Jira bot account's credentials to whatever host the caller named.
+    """
+    evil = respx_mock.get("https://evil.example.org/steal").respond(json={})
+
+    response = await client.get(proxy_url("https://evil.example.org/steal"))
+
+    assert response.status_code == 404
+    assert evil.call_count == 0
+
+
+@pytest.mark.asyncio
+async def test_proxy_refuses_protocol_relative_path(
+    client: AsyncClient, respx_mock: respx.Router, jira_base_url: str
+) -> None:
+    """A protocol-relative path does not redirect the request.
+
+    ``urljoin`` also passes ``//host/path`` through unchanged, inheriting the
+    base URL's scheme.
+    """
+    evil = respx_mock.get("https://evil.example.org/steal").respond(json={})
+
+    response = await client.get(proxy_url("//evil.example.org/steal"))
+
+    assert response.status_code == 404
+    assert evil.call_count == 0
+
+
+@pytest.mark.asyncio
+async def test_proxy_refuses_percent_encoded_absolute_url_path(
+    client: AsyncClient, respx_mock: respx.Router, jira_base_url: str
+) -> None:
+    """Percent-encoding the separator does not slip an absolute URL through.
+
+    An ingress that merges duplicate slashes neutralizes the literal forms of
+    this attack, but ``https:%2F%2Fevil.example.org/`` reaches the
+    application with its slashes intact and is decoded to an absolute URL
+    only once Starlette has parsed the path. The application cannot delegate
+    this check to its ingress.
+    """
+    evil = respx_mock.get("https://evil.example.org/steal").respond(json={})
+
+    response = await client.get(
+        proxy_url("https:%2F%2Fevil.example.org/steal")
+    )
+
+    assert response.status_code == 404
+    assert evil.call_count == 0
+
+
+@pytest.mark.asyncio
+async def test_proxy_refuses_authority_with_userinfo(
+    client: AsyncClient, respx_mock: respx.Router, jira_base_url: str
+) -> None:
+    """The Jira host appearing as userinfo does not make a URL acceptable.
+
+    ``https://jira.example.org@evil.example.org/`` names ``evil.example.org``
+    as its host, and the check has to agree with the HTTP client about that
+    rather than pattern-matching on the URL text.
+    """
+    evil = respx_mock.get("https://evil.example.org/").respond(json={})
+
+    response = await client.get(
+        proxy_url("https://jira.example.org@evil.example.org/")
+    )
+
+    assert response.status_code == 404
+    assert evil.call_count == 0
+
+
+@pytest.mark.asyncio
+async def test_proxy_refuses_scheme_change(
+    client: AsyncClient, respx_mock: respx.Router, jira_base_url: str
+) -> None:
+    """The same host over a different scheme is refused.
+
+    Downgrading to ``http`` would put the basic auth credentials on the wire
+    in the clear.
+    """
+    insecure = respx_mock.get(
+        "http://jira.example.org/rest/api/2/myself"
+    ).respond(json={})
+
+    response = await client.get(
+        proxy_url("http://jira.example.org/rest/api/2/myself")
+    )
+
+    assert response.status_code == 404
+    assert insecure.call_count == 0
+
+
+@pytest.mark.asyncio
+async def test_proxy_refuses_unparseable_path(
+    client: AsyncClient, respx_mock: respx.Router, jira_base_url: str
+) -> None:
+    """A path that cannot be parsed as a URL is refused rather than raised.
+
+    ``https://[/`` makes ``urljoin`` itself raise, which would otherwise
+    surface as a 500.
+    """
+    response = await client.get(proxy_url("https://[/"))
+
+    assert response.status_code == 404
+
+
+@pytest.mark.asyncio
+async def test_proxy_refuses_path_escaping_base_url_path(
+    client: AsyncClient,
+    respx_mock: respx.Router,
+    jira_base_url: str,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Relative segments cannot climb above a base URL with a path.
+
+    Starlette percent-decodes the path before the handler sees it, so
+    ``%2E%2E`` arrives as ``..`` and ``urljoin`` resolves it. The result stays
+    on the Jira host, so this leaks no credentials, but it escapes the
+    configured base URL and is refused for that reason.
+    """
+    monkeypatch.setattr(
+        config, "jira_base_url", HttpUrl("https://jira.example.org/jira/")
+    )
+    outside = respx_mock.get(
+        "https://jira.example.org/secure/Dashboard.jspa"
+    ).respond(json={})
+
+    response = await client.get(proxy_url("%2E%2E/secure/Dashboard.jspa"))
+
+    assert response.status_code == 404
+    assert outside.call_count == 0
+
+
+@pytest.mark.asyncio
 async def test_proxy_passes_non_json_body(
     client: AsyncClient, respx_mock: respx.Router, jira_base_url: str
 ) -> None:
