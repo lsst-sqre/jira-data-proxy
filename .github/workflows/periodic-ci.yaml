@@ -5,6 +5,12 @@
 
 name: Periodic CI
 
+env:
+  # Current supported uv version. The uv documentation recommends pinning
+  # this. The version should match the version used in .pre-commit-config.yaml
+  # and frozen in uv.lock.
+  UV_VERSION: "0.12.0"
+
 "on":
   schedule:
     - cron: "0 12 * * 1"
@@ -15,29 +21,21 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 10
 
-    strategy:
-      matrix:
-        python:
-          - "3.11"
-
     steps:
       - uses: actions/checkout@v4
 
-      # Use the oldest supported version of Python to update dependencies,
-      # not the matrixed Python version, since this accurately reflects
-      # how dependencies should later be updated.
-      - name: Run neophile
-        uses: lsst-sqre/run-neophile@v1
+      - name: Install uv
+        uses: astral-sh/setup-uv@v7
         with:
-          python-version: "3.12"
-          mode: update
+          version: ${{ env.UV_VERSION }}
+
+      - name: Update dependencies
+        run: |
+          make update-deps
+        shell: bash
 
       - name: Run tests in tox
-        uses: lsst-sqre/run-tox@v1
-        with:
-          python-version: ${{ matrix.python }}
-          tox-envs: "lint,typing,py"
-          use-cache: false
+        run: uv run --only-group=tox tox run -e lint,typing,py
 
       - name: Report status
         if: always()
