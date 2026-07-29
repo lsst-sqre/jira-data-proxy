@@ -60,7 +60,7 @@ def resolve_jira_url(path: str) -> URL | None:
     # that points somewhere else.
     try:
         url = URL(urljoin(base_url_str, path, allow_fragments=False))
-    except (InvalidURL, ValueError):
+    except InvalidURL, ValueError:
         return None
 
     origin = (url.scheme, url.host, url.port)
