@@ -11,21 +11,25 @@ classifiers = [
     "License :: OSI Approved :: MIT License",
     "Programming Language :: Python",
     "Programming Language :: Python :: 3",
-    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.14",
     "Intended Audience :: Developers",
     "Natural Language :: English",
     "Operating System :: POSIX",
     "Typing :: Typed",
 ]
-requires-python = ">=3.12"
+requires-python = ">=3.14"
 dependencies = [
     # These dependencies are for fastapi including some optional features.
-    "fastapi",
-    "starlette",
+    "fastapi>=0.141",
+    # starlette >=1.0.1 carries the fix for CVE-2026-48710. Safir 15.1.1
+    # already requires it, but declare it here too so the floor survives a
+    # change to Safir's own constraint.
+    "starlette>=1.0.1",
     "uvicorn[standard]",
 
     # Other dependencies.
-    "safir>=5.0.0",
+    "safir>=15.1.1",
+    "pydantic>=2.13",
     "pydantic_settings",
 ]
 dynamic = ["version"]
@@ -35,7 +39,6 @@ dev = [
     "asgi-lifespan",
     "coverage[toml]",
     "httpx",
-    "pydantic",
     "pytest",
     "pytest-asyncio",
     "pytest-cov",
@@ -129,7 +132,7 @@ python_files = ["tests/*.py", "tests/*/*.py"]
 # section for project-specific ignore rules.
 [tool.ruff]
 extend = "ruff-shared.toml"
-target-version = "py312"
+target-version = "py314"
 
 [tool.ruff.lint.isort]
 known-first-party = ["jiradataproxy", "tests"]
