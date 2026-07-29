@@ -1,5 +1,5 @@
 # This is a separate run of the Python test suite that runs from a schedule,
-# doesn't cache the tox environment, and updates pinned dependencies first.
+# doesn't cache the nox environments, and updates pinned dependencies first.
 # The purpose is to test compatibility with the latest versions of
 # dependencies.
 
@@ -34,8 +34,8 @@ jobs:
           make update-deps
         shell: bash
 
-      - name: Run tests in tox
-        run: uv run --only-group=tox tox run -e lint,typing,py
+      - name: Run tests in nox
+        run: uv run --only-group=nox nox -s lint typing test-coverage
 
       - name: Report status
         if: always()

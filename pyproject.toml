@@ -55,9 +55,9 @@ typing = [
     "mypy",
 ]
 
-tox = [
-    "tox",
-    "tox-uv-bare",
+nox = [
+    "nox[uv]",
+    "nox-uv",
 ]
 
 docs = [
@@ -80,7 +80,7 @@ branch = true
 source = ["jiradataproxy"]
 
 [tool.coverage.paths]
-source = ["src", ".tox/*/site-packages"]
+source = ["src", ".nox/*/lib/python*/site-packages"]
 
 [tool.coverage.report]
 show_missing = true

@@ -13,7 +13,7 @@ init:
 
 .PHONY: run
 run:
-	tox run -e run
+	uv run --only-group=nox nox -s run
 
 .PHONY: update
 update: update-deps init
