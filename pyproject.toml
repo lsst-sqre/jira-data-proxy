@@ -61,9 +61,6 @@ docs = [
     "scriv",
 ]
 
-[project.scripts]
-jira-data-proxy = "jiradataproxy.cli:main"
-
 [project.urls]
 Homepage = "https://jira-data-proxy.lsst.io"
 Source = "https://github.com/lsst-sqre/jira-data-proxy"
