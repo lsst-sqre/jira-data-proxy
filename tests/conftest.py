@@ -36,11 +36,7 @@ async def app() -> AsyncIterator[FastAPI]:
 @pytest_asyncio.fixture
 async def client(app: FastAPI) -> AsyncIterator[AsyncClient]:
     """Return an ``httpx.AsyncClient`` configured to talk to the test app."""
-    # httpx 0.26 types the ASGITransport app parameter with dict-based ASGI
-    # scopes, while Starlette (and therefore FastAPI) uses MutableMapping, so
-    # mypy rejects the assignment. httpx 0.27 relaxed the type; drop the
-    # ignore comment when httpx is unpinned.
-    transport = ASGITransport(app=app)  # type: ignore[arg-type]
+    transport = ASGITransport(app=app)
     async with AsyncClient(
         transport=transport, base_url=TEST_BASE_URL
     ) as client:
