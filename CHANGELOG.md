@@ -7,6 +7,13 @@ Find changes for the upcoming release in the project's [changelog.d directory](h
 
 <!-- scriv-insert-here -->
 
+<a id='changelog-1.0.4'></a>
+## 1.0.4 (2026-11-19)
+
+### Other changes
+
+- Update dependencies. opentelemetry-api 1.45.2 fixes a denial of service through quadratic-time `traceparent` parsing ([GHSA-mf5v-w3w3-f6cg](https://github.com/advisories/GHSA-mf5v-w3w3-f6cg)) and closes the open Dependabot security alert. The update also brings FastAPI 0.165.0, Starlette 1.10.0, Safir 15.2.3, and uv 0.13.9, with uv updated in the Dockerfile, CI, and pre-commit configuration as well as `uv.lock`.
+
 <a id='changelog-1.0.3'></a>
 ## 1.0.3 (2026-10-21)
 
